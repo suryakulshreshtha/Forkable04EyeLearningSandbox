@@ -1,0 +1,37 @@
+name: Flaky test
+description: A test that passes sometimes and fails sometimes
+labels: ["flaky", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A flaky test is worse than no test: it trains the team to ignore red.
+        Note that this repo tests sites we do not own, so first rule out "the
+        site was having a bad day" — that should SKIP, not fail.
+  - type: input
+    id: nodeid
+    attributes:
+      label: Test node ID
+      placeholder: tests/test_10_alerts_frames_windows.py::test_answer_a_prompt
+    validations:
+      required: true
+  - type: input
+    id: rate
+    attributes:
+      label: Observed failure rate
+      placeholder: "3 of 20 runs, firefox only"
+    validations:
+      required: true
+  - type: dropdown
+    id: cause
+    attributes:
+      label: Suspected cause
+      options:
+        - The external site was down or slow (should have skipped)
+        - Timing / missing wait
+        - Shared state between tests
+        - Ordering assumption
+        - Genuine browser difference
+        - Unknown
+    validations:
+      required: true

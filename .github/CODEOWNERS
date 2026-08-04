@@ -1,0 +1,6 @@
+# Every PR touching these paths requests a review from the listed owner.
+# Pair with "Require review from Code Owners" in branch protection once the
+# project has more than one active maintainer.
+*                       @suryakulshreshtha
+/.github/workflows/     @suryakulshreshtha
+/conftest.py            @suryakulshreshtha

@@ -1,0 +1,40 @@
+name: Good first issue
+description: Propose (or claim) a small, well-scoped piece of work
+title: "[good first issue] "
+labels: ["good first issue", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Small and well-scoped beats ambitious. See `TASKS.md` for a board of
+        gaps that already have this shape — claiming one is the easiest start.
+  - type: input
+    id: what
+    attributes:
+      label: What needs doing
+      placeholder: "Add a page object for /upload and use it in topic 4"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [New example, Improve an example, Page object, Fixtures, CI/CD, Docs]
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      placeholder: |
+        - pages/upload_page.py exists and exposes upload_from_memory()
+        - test_04_forms.py uses it
+        - make check passes
+    validations:
+      required: true
+  - type: checkboxes
+    id: claim
+    attributes:
+      label: Claiming
+      options:
+        - label: I want to work on this myself

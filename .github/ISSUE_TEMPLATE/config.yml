@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Playwright Python docs
+    url: https://playwright.dev/python/docs/intro
+    about: The official reference. Check here before filing a usage question.
+  - name: Discussions
+    url: https://github.com/suryakulshreshtha/Forkable04EyeLearningSandbox/discussions
+    about: Questions, ideas and "is this the right way to do X?"

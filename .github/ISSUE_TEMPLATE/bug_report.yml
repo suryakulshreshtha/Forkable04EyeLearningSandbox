@@ -1,0 +1,38 @@
+name: Bug report
+description: Something in the sandbox is broken
+labels: ["bug", "triage"]
+body:
+  - type: input
+    id: command
+    attributes:
+      label: Exact command you ran
+      placeholder: pytest tests/test_04_forms.py -k dropdown --browser firefox
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Full pytest output
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options: [chromium, firefox, webkit, all, not browser-specific]
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I ran `python -m playwright install` after pulling
+        - label: The external site itself is up (the run did not just skip)
