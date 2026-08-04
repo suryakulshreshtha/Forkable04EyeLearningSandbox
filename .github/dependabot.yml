@@ -1,0 +1,23 @@
+# Free, built in, and the cheapest supply-chain hygiene available. Your own CI
+# then tests each upgrade for you -- which is the entire point of having it.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+    groups:
+      pytest-plugins:
+        patterns: ["pytest*"]
+      dev-tooling:
+        patterns: ["ruff", "black", "pre-commit"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels: ["dependencies", "ci"]
+    groups:
+      actions:
+        patterns: ["*"]
