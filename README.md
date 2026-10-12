@@ -1,13 +1,14 @@
 # Forkable04EyeLearningSandbox
 
 [![CI](https://github.com/suryakulshreshtha/Forkable04EyeLearningSandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/suryakulshreshtha/Forkable04EyeLearningSandbox/actions/workflows/ci.yml)
+[![Live sites](https://github.com/suryakulshreshtha/Forkable04EyeLearningSandbox/actions/workflows/live-sites.yml/badge.svg)](https://github.com/suryakulshreshtha/Forkable04EyeLearningSandbox/actions/workflows/live-sites.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![Playwright](https://img.shields.io/badge/playwright-1.47%2B-green)](https://playwright.dev/python/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 [![good first issues](https://img.shields.io/github/issues/suryakulshreshtha/Forkable04EyeLearningSandbox/good%20first%20issue)](https://github.com/suryakulshreshtha/Forkable04EyeLearningSandbox/labels/good%20first%20issue)
 
-> **One short, heavily-commented example per topic.** Python + Playwright + a
-> CI pipeline you can read on one screen. Built to be forked, argued with, and
+> **One short, heavily-commented example per topic.** Python + Playwright +
+> two short CI workflows you can read on one screen each. Built to be forked, argued with, and
 > contributed to.
 
 No app to install and no accounts to create — every example runs against public
@@ -65,22 +66,30 @@ in one place), `conftest.py` (the reachability probe and shared fixtures).
 
 ---
 
-## CI/CD, in one file
+## CI/CD, in two files
 
-`.github/workflows/ci.yml` is ~140 lines including comments, and every concept
-is visible at once:
+Two workflows, on purpose. `.github/workflows/ci.yml` gates every push and pull
+request on what you control: lint, test collection and the API tests.
+`.github/workflows/live-sites.yml` runs the browser suite against the public
+practice sites, weekly and on demand. Those sites are not ours, and from a shared
+runner they are sometimes slow, sometimes unreachable and sometimes different, so
+a red build there means "go and look at the sites", not "your change is broken".
+Each workflow has its own badge.
+
+Every concept is visible at once:
 
 | Concept | Where |
 | --- | --- |
-| Triggers: push, PR, manual, scheduled | `on:` |
+| Triggers: push, PR, manual | `ci.yml` `on:` |
+| Triggers: scheduled, manual | `live-sites.yml` `on:` |
+| A gate you control vs a watcher you do not | `ci.yml` vs `live-sites.yml` |
 | Least-privilege token | `permissions: contents: read` |
 | Auto-cancel superseded runs | `concurrency:` |
 | Fail fast and cheap | `lint` → `needs: lint` |
-| Matrix across browsers | `strategy.matrix.browser` |
+| Matrix across browsers | `live-sites.yml` `strategy.matrix.browser` |
 | `fail-fast: false` | one engine's failure does not cancel the others |
 | Dependency + browser caching | `setup-python cache: pip`, `actions/cache` keyed on the Playwright version |
 | The cache-hit trap | `install-deps` still runs — OS libs are not in the cache |
-| Two-tier suites | PRs run `smoke`, main runs everything |
 | Artifacts you can debug from | `upload-artifact` with `if: always()` |
 | Job summaries | `$GITHUB_STEP_SUMMARY` |
 | Timeouts on every job | `timeout-minutes` |
@@ -92,7 +101,7 @@ is visible at once:
 
 ```bash
 make test        # everything
-make smoke       # the stable subset CI gates on
+make smoke       # the stable browser subset, for a quick local check
 make api         # no browser, milliseconds
 make ui          # browser only
 make parallel    # -n auto

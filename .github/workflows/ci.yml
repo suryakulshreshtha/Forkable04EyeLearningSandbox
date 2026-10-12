@@ -1,10 +1,12 @@
 # =============================================================================
-# THE WHOLE PIPELINE, ON ONE SCREEN.
+# THE GATE: what you control, on one screen.
 #
-#   lint  ->  test  ->  (artifact)
+#   lint  ->  api tests
 #
-# The big sibling repo shards across 16 jobs. This one deliberately does not:
-# the point here is that you can read every CI/CD concept in a single file.
+# The browser suite drives public practice sites we do not own. From a shared
+# runner they are sometimes slow, sometimes unreachable and sometimes different,
+# so it lives in live-sites.yml with its own badge. A merge gate that goes red
+# because somebody else's website had a bad hour teaches the team to ignore red.
 # Each block is annotated with WHY, not just what.
 # =============================================================================
 name: CI
@@ -16,8 +18,6 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:                        # adds a "Run workflow" button
-  schedule:
-    - cron: "0 3 * * 1"                     # Mondays 03:00 UTC (cron is UTC)
 
 # Least privilege. The token can write to your repo by default; we only read.
 permissions:
@@ -31,8 +31,6 @@ concurrency:
 
 env:
   PYTHONUNBUFFERED: "1"
-  # Public-internet round trips from a shared runner are slow and jittery.
-  TIMEOUT_MS: "30000"
   # A site being down should SKIP, not fail. See conftest.py for the reasoning.
   SKIP_IF_SITE_DOWN: "true"
 
@@ -69,20 +67,13 @@ jobs:
         run: pytest --collect-only -q
 
   # ---------------------------------------------------------------------------
-  # 2. TEST -- browsers, cached, with artifacts on failure.
+  # 2. API TESTS -- no browser, so no 400MB download and no flaky page loads.
   # ---------------------------------------------------------------------------
-  test:
-    name: Tests (${{ matrix.browser }})
+  api:
+    name: API tests
     needs: lint                 # fail fast, and fail cheap
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    strategy:
-      # A webkit failure must not cancel the chromium job. You want the whole
-      # picture from one run, not a game of whack-a-mole.
-      fail-fast: false
-      matrix:
-        browser: [chromium, firefox]
-
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -94,65 +85,19 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      # Browser binaries are ~400MB and 60-90s to download. The cache key
-      # includes the resolved Playwright version, so upgrading the client
-      # always fetches matching binaries -- a stale-browser/new-client mismatch
-      # is a horrible bug to diagnose.
-      - name: Resolve Playwright version
-        id: pw
-        run: echo "version=$(python -c 'import importlib.metadata as m; print(m.version(\"playwright\"))')" >> "$GITHUB_OUTPUT"
-
-      - name: Cache browsers
-        id: cache
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: pw-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
-
-      - name: Install browser
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: python -m playwright install --with-deps ${{ matrix.browser }}
-
-      # Even on a cache HIT the OS-level shared libraries must be installed --
-      # they live in /usr/lib, outside the cached directory. Forgetting this is
-      # the most common broken-cache bug in Playwright CI.
-      - name: Install OS dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
-        run: python -m playwright install-deps ${{ matrix.browser }}
-
-      # Pull requests run the stable subset so reviews stay fast; pushes to
-      # main and the weekly schedule run everything. Two-tier suites are how
-      # you keep a gate people do not resent.
-      - name: Run tests
-        run: |
-          MARKERS="not wip"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            MARKERS="smoke and $MARKERS"
-          fi
-          pytest -m "$MARKERS" --browser ${{ matrix.browser }} -v
+      # Plain HTTP against JSONPlaceholder. If that host is unreachable these
+      # skip (see conftest.py), so somebody else's bad hour shows up as a skip
+      # in the report, not as a red build.
+      - name: Run API tests
+        run: pytest -m "api and not wip" -v
 
       # if: always() is the most important line here. Steps are skipped once a
-      # previous one fails -- which is exactly when you need the trace.
-      - name: Upload report and traces
+      # previous one fails -- which is exactly when you need the report.
+      - name: Upload report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: report-${{ matrix.browser }}
+          name: report-api
           path: reports/
           retention-days: 14
           if-no-files-found: warn
-
-      # $GITHUB_STEP_SUMMARY renders markdown on the run's landing page --
-      # much friendlier than asking people to read logs.
-      - name: Summary
-        if: always()
-        run: |
-          {
-            echo "## ${{ matrix.browser }}"
-            echo ""
-            echo "Event: \`${{ github.event_name }}\`"
-            echo ""
-            echo "Skipped tests are sites being unreachable, not failures."
-            echo "Download the \`report-${{ matrix.browser }}\` artifact and run"
-            echo "\`playwright show-trace trace.zip\` to replay any failure."
-          } >> "$GITHUB_STEP_SUMMARY"

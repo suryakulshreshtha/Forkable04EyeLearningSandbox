@@ -10,7 +10,7 @@ install:  ## Install dependencies and browsers
 
 test:     ## Run every example
 	pytest -m "not wip"
-smoke:    ## The stable subset CI gates on
+smoke:    ## The stable browser subset, for a quick local check
 	pytest -m smoke
 api:      ## API examples only, no browser
 	pytest -m api

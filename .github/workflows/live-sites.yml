@@ -1,0 +1,115 @@
+# =============================================================================
+# THE LIVE SITES: the browser suite, against sites we do not own.
+#
+# Deliberately NOT part of ci.yml. These tests drive public practice sites
+# (the-internet.herokuapp.com and friends). From a shared GitHub runner those
+# sites are sometimes slow (in one run every page took about 30 seconds),
+# sometimes unreachable, and sometimes answer with a page that lacks the element
+# a test is looking for. So this runs weekly and on demand, and has its own
+# badge. Red here means "go and look at the sites", not "your change is broken".
+# =============================================================================
+name: Live sites
+
+on:
+  workflow_dispatch:                        # adds a "Run workflow" button
+  schedule:
+    - cron: "0 3 * * 1"                     # Mondays 03:00 UTC (cron is UTC)
+
+# Least privilege. The token can write to your repo by default; we only read.
+permissions:
+  contents: read
+
+concurrency:
+  group: live-sites-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  # Public-internet round trips from a shared runner are slow and jittery.
+  TIMEOUT_MS: "30000"
+  # A site being down should SKIP, not fail. See conftest.py for the reasoning.
+  SKIP_IF_SITE_DOWN: "true"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # BROWSERS -- cached, with artifacts on failure.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Tests (${{ matrix.browser }})
+    runs-on: ubuntu-24.04
+    # One run measured about 30 seconds per test, and 60-odd tests do not fit in 25 minutes.
+    timeout-minutes: 45
+    strategy:
+      # A webkit failure must not cancel the chromium job. You want the whole
+      # picture from one run, not a game of whack-a-mole.
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - run: pip install -r requirements.txt
+
+      # Browser binaries are ~400MB and 60-90s to download. The cache key
+      # includes the resolved Playwright version, so upgrading the client
+      # always fetches matching binaries -- a stale-browser/new-client mismatch
+      # is a horrible bug to diagnose.
+      - name: Resolve Playwright version
+        id: pw
+        run: |
+          echo "version=$(python -c "import importlib.metadata as m; print(m.version('playwright'))")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache browsers
+        id: cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
+
+      - name: Install browser
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: python -m playwright install --with-deps ${{ matrix.browser }}
+
+      # Even on a cache HIT the OS-level shared libraries must be installed --
+      # they live in /usr/lib, outside the cached directory. Forgetting this is
+      # the most common broken-cache bug in Playwright CI.
+      - name: Install OS dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: python -m playwright install-deps ${{ matrix.browser }}
+
+      # Everything that drives a browser. The API tests run in ci.yml.
+      - name: Run tests
+        run: pytest -m "not wip and not api" --browser ${{ matrix.browser }} -v
+
+      # if: always() is the most important line here. Steps are skipped once a
+      # previous one fails -- which is exactly when you need the trace.
+      - name: Upload report and traces
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: report-${{ matrix.browser }}
+          path: reports/
+          retention-days: 14
+          if-no-files-found: warn
+
+      # $GITHUB_STEP_SUMMARY renders markdown on the run's landing page --
+      # much friendlier than asking people to read logs.
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## ${{ matrix.browser }}"
+            echo ""
+            echo "Event: \`${{ github.event_name }}\`"
+            echo ""
+            echo "Skipped tests are sites being unreachable, not failures."
+            echo "Download the \`report-${{ matrix.browser }}\` artifact and run"
+            echo "\`playwright show-trace trace.zip\` to replay any failure."
+          } >> "$GITHUB_STEP_SUMMARY"
