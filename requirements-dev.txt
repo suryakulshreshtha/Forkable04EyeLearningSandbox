@@ -1,5 +1,5 @@
 -r requirements.txt
-ruff>=0.16.1
+ruff>=0.16.8
 black>=26.5.1
-pre-commit>=4.6.1
+pre-commit>=4.6.2
 pyyaml>=6.0
