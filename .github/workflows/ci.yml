@@ -42,7 +42,7 @@ jobs:
   # ---------------------------------------------------------------------------
   lint:
     name: Lint and collect
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10          # without this, a hang burns six hours of quota
     steps:
       - uses: actions/checkout@v7
@@ -74,7 +74,7 @@ jobs:
   test:
     name: Tests (${{ matrix.browser }})
     needs: lint                 # fail fast, and fail cheap
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     strategy:
       # A webkit failure must not cancel the chromium job. You want the whole
