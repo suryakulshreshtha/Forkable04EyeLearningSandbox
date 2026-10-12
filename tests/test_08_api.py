@@ -74,19 +74,24 @@ def test_create_update_delete(api: APIRequestContext) -> None:
 
     Splitting CRUD into four tests that share an id is the classic ordering
     trap: it breaks the moment the suite runs in parallel or is sharded.
+
+    JSONPlaceholder does not store what you POST, so the id it hands back
+    (101) does not exist afterwards, and PUT /posts/101 answers 500. The update
+    and the delete therefore target a post that does exist. Against a real API
+    you would reuse the id from the POST; here the fake cannot prove that
+    anything was stored, so assert only what it can honestly tell you.
     """
     payload = {"title": "sandbox", "body": "written by a test", "userId": 1}
 
     created = api.post("/posts", data=payload)
     assert created.status == 201
     assert created.json()["title"] == payload["title"]
-    new_id = created.json()["id"]
 
-    updated = api.put(f"/posts/{new_id}", data={**payload, "id": new_id, "title": "edited"})
+    updated = api.put("/posts/1", data={**payload, "id": 1, "title": "edited"})
     assert updated.status == 200
     assert updated.json()["title"] == "edited"
 
-    assert api.delete(f"/posts/{new_id}").status == 200
+    assert api.delete("/posts/1").status == 200
 
 
 def test_nested_resources(api: APIRequestContext) -> None:
