@@ -1,3 +1,7 @@
+<!-- forkable-card:start (added by apply_cards.py; re-run it to update) -->
+![04Eye Learning Sandbox: one short, heavily-commented example per topic](.github/assets/forkable-card.png)
+<!-- forkable-card:end -->
+
 # Forkable04EyeLearningSandbox
 
 [![CI](https://github.com/suryakulshreshtha/Forkable04EyeLearningSandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/suryakulshreshtha/Forkable04EyeLearningSandbox/actions/workflows/ci.yml)
